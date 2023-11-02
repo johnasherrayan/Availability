@@ -34,11 +34,12 @@ def calculate_data_availability(timestamp, valid_data_points, time_period='day',
             data_availability = (valid_points / total_possible_points) * 100
             return data_availability
         
-def get_none_availability_data(campaign_id, timestamp, height):
+def get_none_availability_data(campaign_id, timestamp, height, average_time_diff):
+        nominal_timestamp = timestamp + timedelta(minutes=average_time_diff)
         none_availability_data = {
             'campaign_id': campaign_id,
-            'timestamp': timestamp,
-            'nominal_timestamp': timestamp,
+            'timestamp': nominal_timestamp,
+            'nominal_timestamp': nominal_timestamp,
         }
 
         for _ in range(1, height + 1):

@@ -147,7 +147,7 @@ class AvailabilityCalculateView(APIView):
                         time_diff_minutes = (current_timestamp - prev_timestamp).total_seconds() / 60
 
                         if time_diff_minutes > average_time_diff:
-                            response_data.append(get_none_availability_data(campaign_id, timestamp, height))
+                            response_data.append(get_none_availability_data(campaign_id, prev_timestamp, height, average_time_diff))
                             continue
 
                     for _ in range(1, height+1):
