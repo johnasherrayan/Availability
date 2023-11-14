@@ -4,8 +4,7 @@ from rest_framework.views import APIView
 from .models import Availability, Campaign, LidarMeasurement
 from rest_framework import status
 from .serializers import AvailabilitySerializer, CampaignSerializer, LidarMeasurementSerializer
-from .utils import calculate_data_availability, get_none_availability_data, calculate_average_time_difference
-from datetime import datetime, timedelta
+from .utils import calculate_data_availability, get_none_availability_data, calculate_missing_timestamp
 
 class CampaignDetailView(APIView):
     def get(self, request, id=None):
@@ -129,26 +128,24 @@ class AvailabilityCalculateView(APIView):
         try:
             campaign_id = request.data.get('campaign_id')
             data_points = request.data.get('data', [])
-            
-            average_time_diff = calculate_average_time_difference(data_points)
+
             response_data = []
-            availability_data = {}
-            for i, data_point in enumerate(data_points):
+            availability_data = {} 
+
+            missing_timestamp = calculate_missing_timestamp(data_points)
+
+            all_timestamps = sorted(data_points + [{"timestamp": ts} for ts in missing_timestamp], key=lambda x: x['timestamp'])
+
+            for i, data_point in enumerate(all_timestamps):
                 timestamp = data_point.get('timestamp')
                 data_available = data_point.get('dataAvailable', False)
                 height = data_point.get('height')
 
+                if timestamp in missing_timestamp:
+                    response_data.append(get_none_availability_data(campaign_id, timestamp))
+
                 if data_available:
                     valid_data_points = height
-
-                    if i > 0:
-                        prev_timestamp = datetime.strptime(data_points[i - 1]['timestamp'], '%Y-%m-%dT%H:%M:%S')
-                        current_timestamp = datetime.strptime(timestamp, '%Y-%m-%dT%H:%M:%S')
-                        time_diff_minutes = (current_timestamp - prev_timestamp).total_seconds() / 60
-
-                        if time_diff_minutes > average_time_diff:
-                            response_data.append(get_none_availability_data(campaign_id, prev_timestamp, height, average_time_diff))
-                            continue
 
                     for _ in range(1, height+1):
                         daily_data_availability = calculate_data_availability(timestamp, valid_data_points, time_period='day')
@@ -176,4 +173,58 @@ class AvailabilityCalculateView(APIView):
         
         except Exception as e:
             return Response({'detail': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+# class AvailabilityCalculateView(APIView):
+#     def post(self, request, *args, **kwargs):
+#         try:
+#             campaign_id = request.data.get('campaign_id')
+#             data_points = request.data.get('data', [])
+            
+#             average_time_diff = calculate_average_time_difference(data_points)
+#             response_data = []
+#             availability_data = {}
+#             for i, data_point in enumerate(data_points):
+#                 timestamp = data_point.get('timestamp')
+#                 data_available = data_point.get('dataAvailable', False)
+#                 height = data_point.get('height')
+
+#                 if data_available:
+#                     valid_data_points = height
+
+#                     if i > 0:
+#                         prev_timestamp = datetime.strptime(data_points[i - 1]['timestamp'], '%Y-%m-%dT%H:%M:%S')
+#                         current_timestamp = datetime.strptime(timestamp, '%Y-%m-%dT%H:%M:%S')
+#                         time_diff_minutes = (current_timestamp - prev_timestamp).total_seconds() / 60
+
+#                         if time_diff_minutes > average_time_diff:
+#                             response_data.append(get_none_availability_data(campaign_id, prev_timestamp, height, average_time_diff))
+#                             continue
+
+#                     for _ in range(1, height+1):
+#                         daily_data_availability = calculate_data_availability(timestamp, valid_data_points, time_period='day')
+#                         hourly_data_availability = calculate_data_availability(timestamp, valid_data_points, time_period='hour')
+#                         monthly_availability = calculate_data_availability(timestamp, valid_data_points, time_period='month')
+#                         campaign_availability = 0
+
+#                         availability_data = {
+#                             'campaign_id': campaign_id,
+#                             'timestamp': timestamp,
+#                             'nominal_timestamp': timestamp,
+#                             'daily_availability': daily_data_availability,
+#                             'hourly_availability': hourly_data_availability,
+#                             'monthly_availability': monthly_availability,
+#                             'campaign_availability': campaign_availability,
+#                             'is_data': data_available,
+#                             'height': height
+#                         }
+
+#                         response_data.append(availability_data)
+#                         serializer = AvailabilitySerializer(data=availability_data)
+#                         if serializer.is_valid():
+#                             serializer.save()
+#             return Response(response_data, status=status.HTTP_201_CREATED)
+        
+#         except Exception as e:
+#             return Response({'detail': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
