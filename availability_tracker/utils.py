@@ -63,24 +63,6 @@ def get_none_availability_data(campaign_id, missing_timestamp):
             logger.error(f'Serializer errors: {serializer.errors}')
         return none_availability_data
 
-
-def calculate_missing_timestamp(data_points):
-    datetime_objects = [datetime.fromisoformat(entry["timestamp"]) for entry in data_points]
-    expected_interval = timedelta(minutes=10)
-
-    missing_timestamps = []
-    for i in range(len(datetime_objects) - 1):
-        current_time = datetime_objects[i]
-        next_time = datetime_objects[i + 1]
-
-        if next_time - current_time > expected_interval:
-            num_missing = int((next_time - current_time) / expected_interval) - 1
-            for j in range(1, num_missing + 1):
-                missing_timestamp = current_time + j * expected_interval
-                missing_timestamps.append(missing_timestamp.isoformat())
-
-    return missing_timestamps
-
         
         
 
