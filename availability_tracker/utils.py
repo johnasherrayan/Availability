@@ -8,7 +8,7 @@ from .models import Availability
 
 logger = logging.getLogger(__name__)
 
-def calculate_data_availability(timestamp, valid_data_points, time_period='day', gap_threshold=timedelta(minutes=10)):
+def calculate_data_availability(timestamp, valid_data_points, campaign_id, time_period='day'):
         
         if time_period == 'day':
             timestamp = datetime.fromisoformat(timestamp)
@@ -35,6 +35,17 @@ def calculate_data_availability(timestamp, valid_data_points, time_period='day',
             non_null_count = Availability.objects.filter(timestamp__year=year, timestamp__month=month, monthly_availability__isnull=False).count()
 
             total_possible_points = 4320
+            valid_points = valid_data_points + non_null_count
+
+            data_availability = (valid_points / total_possible_points) * 100
+            return data_availability
+        
+        if time_period == 'campaign':
+            timestamp = datetime.fromisoformat(timestamp)
+            year = timestamp.year
+            non_null_count = Availability.objects.filter(campaign_id=campaign_id, timestamp__year=year, campaign_availability__isnull=False).count()
+
+            total_possible_points = 51840
             valid_points = valid_data_points + non_null_count
 
             data_availability = (valid_points / total_possible_points) * 100

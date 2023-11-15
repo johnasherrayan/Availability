@@ -160,10 +160,10 @@ class AvailabilityCalculateView(APIView):
                     valid_data_points = height
 
                     for i in range(1, height+1):
-                        daily_data_availability = calculate_data_availability(timestamp, valid_data_points, time_period='day')
-                        hourly_data_availability = calculate_data_availability(timestamp, valid_data_points, time_period='hour')
-                        monthly_availability = calculate_data_availability(timestamp, valid_data_points, time_period='month')
-                        campaign_availability = 0
+                        daily_data_availability = calculate_data_availability(timestamp, valid_data_points, campaign_id, time_period='day')
+                        hourly_data_availability = calculate_data_availability(timestamp, valid_data_points, campaign_id, time_period='hour')
+                        monthly_availability = calculate_data_availability(timestamp, valid_data_points, campaign_id, time_period='month')
+                        campaign_availability = calculate_data_availability(timestamp, valid_data_points, campaign_id, time_period='campaign')
 
                         availability_data = {
                             'campaign_id': campaign_id,
