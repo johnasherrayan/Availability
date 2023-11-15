@@ -41,15 +41,23 @@ def calculate_data_availability(timestamp, valid_data_points, campaign_id, time_
             return data_availability
         
         if time_period == 'campaign':
-            timestamp = datetime.fromisoformat(timestamp)
-            year = timestamp.year
-            non_null_count = Availability.objects.filter(campaign_id=campaign_id, timestamp__year=year, campaign_availability__isnull=False).count()
 
-            total_possible_points = 51840
+            first_timestamp = Availability.objects.filter(campaign_id=campaign_id, campaign_availability__isnull=False).order_by('timestamp').first()
+
+            last_timestamp = Availability.objects.filter(campaign_id=campaign_id, campaign_availability__isnull=False).order_by('-timestamp').first()
+
+            if first_timestamp is not None and last_timestamp is not None:
+                calculate_total_days = calculate_total_possible_days(first_timestamp.timestamp, last_timestamp.timestamp)
+
+            timestamp = datetime.fromisoformat(timestamp)
+            non_null_count = Availability.objects.filter(campaign_id=campaign_id, timestamp__gte=first_timestamp.timestamp, timestamp__lte=last_timestamp.timestamp, campaign_availability__isnull=False).count()
+
+            total_possible_points = calculate_total_days * 144
             valid_points = valid_data_points + non_null_count
 
             data_availability = (valid_points / total_possible_points) * 100
             return data_availability
+        
         
 def get_none_availability_data(campaign_id, missing_timestamp):
         nominal_timestamp = missing_timestamp
@@ -73,6 +81,11 @@ def get_none_availability_data(campaign_id, missing_timestamp):
         else:
             logger.error(f'Serializer errors: {serializer.errors}')
         return none_availability_data
+
+
+def calculate_total_possible_days(start_timestamp, end_timestamp):
+    total_possible_days = (end_timestamp - start_timestamp).days + 1
+    return total_possible_days
 
         
         
