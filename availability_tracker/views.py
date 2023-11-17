@@ -6,6 +6,8 @@ from rest_framework import status
 from .serializers import AvailabilitySerializer, CampaignSerializer, LidarMeasurementSerializer
 from .utils import calculate_data_availability, get_none_availability_data
 import pandas as pd
+import os
+import json
 
 class CampaignDetailView(APIView):
     def get(self, request, id=None):
@@ -125,17 +127,30 @@ class LidarMeasurementListCreateView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class AvailabilityCalculateView(APIView):
+    APP_BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    FILE_PATH = os.path.join(APP_BASE_DIR, 'availability_tracker', 'payload_data', 'data.json')
+
+    def check_file_existence(self):
+        return os.path.exists(self.FILE_PATH)
+    
+    def read_data_from_file(self):
+        with open(self.FILE_PATH, 'r') as file:
+            data = json.load(file)
+        return data
+
     def post(self, request, *args, **kwargs):
         try:
-            campaign_id = request.data.get('campaign_id')
-            data_points = request.data.get('data', [])
+            data_points = self.read_data_from_file()
+            # campaign_id = request.data.get('campaign_id')
+            # data_points = request.data.get('data', [])
+            campaign_id = data_points["campaign_id"]
+            data_points = data_points["data"]
 
             response_data = []
             availability_data = {} 
 
             start_timestamp = data_points[0]["timestamp"]
             end_timestamp = data_points[-1]["timestamp"]
-
             timestamps = [point["timestamp"] for point in data_points]
 
             nominal_timestamps = pd.date_range(start = start_timestamp , end = end_timestamp, freq='10T')
@@ -145,7 +160,6 @@ class AvailabilityCalculateView(APIView):
             nominal_timestamps_set = set(nominal_timestamps_list)
 
             missing_timestamp = list(nominal_timestamps_set - timestamps_set)
-
             all_timestamps = sorted(data_points + [{"timestamp": ts} for ts in missing_timestamp], key=lambda x: x['timestamp'])
 
             for i, data_point in enumerate(all_timestamps):
