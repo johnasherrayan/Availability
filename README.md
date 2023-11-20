@@ -20,6 +20,31 @@ The Lidar Availability Tracker is a Django web application designed to compute t
 
    pip install -r requirements.txt
 
+## Cross-Origin Resource Sharing (CORS) Setup
+1. Install django-cors-headers
+
+```bash
+pip install django-cors-headers
+```
+
+2. Update Django Settings
+```bash
+INSTALLED_APPS = [
+    'corsheaders',
+]
+
+MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware',
+]
+```
+3. Configure Allowed Origins
+```bash
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:4200",
+]
+```
+
+
 ## Execution
 
 Create a .env file and provide environment variables to establish a connection with S3:
@@ -35,8 +60,6 @@ Run the following commands to set up the database and start the server:
 python manage.py migrate
 
 python manage.py runserver
-
-
 
 
 ## API Reference
@@ -79,5 +102,7 @@ python manage.py runserver
   POST /api/availability_calculate/
 ```
 Payload data will be comming from AWS S3
+
+
 
 
