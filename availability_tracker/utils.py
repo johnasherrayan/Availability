@@ -4,9 +4,16 @@ from datetime import datetime, timedelta, date
 from .serializers import AvailabilitySerializer
 import logging
 from .models import Availability
+import os
+import boto3
+import requests
+from dotenv import load_dotenv
+import json
+
 
 
 logger = logging.getLogger(__name__)
+load_dotenv()
 
 def calculate_data_availability(timestamp, valid_data_points, campaign_id, time_period='day'):
         
@@ -86,6 +93,36 @@ def get_none_availability_data(campaign_id, missing_timestamp):
 def calculate_total_possible_days(start_timestamp, end_timestamp):
     total_possible_days = (end_timestamp - start_timestamp).days + 1
     return total_possible_days
+
+
+def read_data_from_aws_s3():  
+    aws_access_key = os.getenv('AWS_ACCESS_KEY_ID')
+    aws_secret_key = os.getenv('AWS_SECRET_ACCESS_KEY')
+    aws_bucket_name = os.getenv('AWS_BUCKET_NAME')
+    aws_object_key = os.getenv('AWS_OBJECT_KEY')
+    aws_region_name = os.getenv('AWS_REGION_NAME')
+    
+    s3 = boto3.client('s3', aws_access_key_id=aws_access_key,
+                  aws_secret_access_key=aws_secret_key, region_name=aws_region_name)
+    try:
+        url = s3.generate_presigned_url('get_object', Params={'Bucket': aws_bucket_name, 'Key': aws_object_key})
+
+        response = requests.get(url)
+        if response.status_code == 200:
+            return json.loads(response.text)
+        else:
+            print(f"Unexpected status code: {response.status_code}")
+            return None
+        
+    except requests.exceptions.RequestException as e:
+        print(f"Error making request: {e}")
+        return None
+    
+    except Exception as e:
+        print(f"An error occurred: {e}")
+        return None
+
+
 
         
         

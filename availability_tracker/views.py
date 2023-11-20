@@ -4,7 +4,7 @@ from rest_framework.views import APIView
 from .models import Availability, Campaign, LidarMeasurement
 from rest_framework import status
 from .serializers import AvailabilitySerializer, CampaignSerializer, LidarMeasurementSerializer
-from .utils import calculate_data_availability, get_none_availability_data
+from .utils import calculate_data_availability, get_none_availability_data, read_data_from_aws_s3
 import pandas as pd
 import os
 import json
@@ -127,22 +127,12 @@ class LidarMeasurementListCreateView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class AvailabilityCalculateView(APIView):
-    APP_BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    FILE_PATH = os.path.join(APP_BASE_DIR, 'availability_tracker', 'payload_data', 'data.json')
-
-    def check_file_existence(self):
-        return os.path.exists(self.FILE_PATH)
-    
-    def read_data_from_file(self):
-        with open(self.FILE_PATH, 'r') as file:
-            data = json.load(file)
-        return data
-
     def post(self, request, *args, **kwargs):
         try:
-            data_points = self.read_data_from_file()
-            # campaign_id = request.data.get('campaign_id')
-            # data_points = request.data.get('data', [])
+            data_points = read_data_from_aws_s3()
+            if not data_points:
+                return "Failed to fetch data from AWS S3."
+            
             campaign_id = data_points["campaign_id"]
             data_points = data_points["data"]
 
